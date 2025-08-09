@@ -4,6 +4,8 @@ import sys
 from pygame import Vector2
 
 import audio
+from engine.input import InputHandler
+from engine.ui import ScoreUI
 
 # Инициализация Pygame
 pygame.init()
@@ -94,6 +96,10 @@ class Main:
         # load sound effects
         audio.audio.load_effect('food', 'food.wav')
         audio.audio.load_effect('game_over', 'game_over.wav')
+
+        # Engine subsystems
+        self.input = InputHandler()
+        self.ui = ScoreUI(screen)
         
     def update(self):
         if self.game_active:
@@ -158,23 +164,7 @@ class Main:
         self.on_game_over()
     
     def draw_score(self):
-        score_text = f'Счёт: {self.score}'
-        high_score_text = f'Рекорд: {self.high_score}'
-        
-        font = pygame.font.Font(None, 50)
-        score_surface = font.render(score_text, True, SCORE_COLOR)
-        high_score_surface = font.render(high_score_text, True, SCORE_COLOR)
-        
-        score_x = int(SCREEN_SIZE - 200)
-        score_y = int(20)
-        score_rect = score_surface.get_rect(center=(score_x, score_y))
-        
-        high_score_x = int(SCREEN_SIZE - 200)
-        high_score_y = int(60)
-        high_score_rect = high_score_surface.get_rect(center=(high_score_x, high_score_y))
-        
-        screen.blit(score_surface, score_rect)
-        screen.blit(high_score_surface, high_score_rect)
+        self.ui.draw(self.score, self.high_score)
 
     def start_game(self):
         self.game_active = True
@@ -219,31 +209,32 @@ pygame.time.set_timer(SCREEN_UPDATE, 150)
 
 # Основной игровой цикл
 while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    for event in main_game.input.get_events():
+        if event.type == "quit":
             pygame.quit()
             sys.exit()
-        if event.type == SCREEN_UPDATE:
+        if event.type == "user" and event.user_type == SCREEN_UPDATE:
             main_game.update()
-        if event.type == pygame.KEYDOWN:
+        if event.type == "key_down":
+            key = event.key
             if main_game.settings_active:
-                if event.key == pygame.K_s:
+                if key == pygame.K_s:
                     main_game.toggle_sound()
-                if event.key == pygame.K_ESCAPE:
+                if key == pygame.K_ESCAPE:
                     main_game.settings_active = False
             else:
-                if event.key == pygame.K_SPACE and not main_game.game_active:
+                if key == pygame.K_SPACE and not main_game.game_active:
                     main_game.start_game()
-                elif event.key == pygame.K_n and not main_game.game_active:
+                elif key == pygame.K_n and not main_game.game_active:
                     main_game.settings_active = True
                 if main_game.game_active:
-                    if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+                    if key == pygame.K_UP and main_game.snake.direction.y != 1:
                         main_game.snake.direction = Vector2(0, -1)
-                    if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+                    if key == pygame.K_DOWN and main_game.snake.direction.y != -1:
                         main_game.snake.direction = Vector2(0, 1)
-                    if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+                    if key == pygame.K_LEFT and main_game.snake.direction.x != 1:
                         main_game.snake.direction = Vector2(-1, 0)
-                    if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+                    if key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
                         main_game.snake.direction = Vector2(1, 0)
     
     screen.fill(BACKGROUND_COLOR)

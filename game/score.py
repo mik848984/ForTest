@@ -11,6 +11,7 @@ class ScoreManager:
 
     def __init__(self, level: Optional[Level] = None) -> None:
         self.score = 0
+        self.high_score = 0
         self.level = level or Level()
         self.on_food_eaten: List[Callable[[int], None]] = []
         self.on_game_over: List[Callable[[], None]] = []
@@ -24,6 +25,8 @@ class ScoreManager:
 
     def game_over(self) -> None:
         """Reset state and notify listeners of game over."""
+        if self.score > self.high_score:
+            self.high_score = self.score
         self.score = 0
         self.level.reset()
         for cb in list(self.on_game_over):
