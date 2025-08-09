@@ -1,0 +1,9 @@
+{
+  "start": {"keyboard": "K_SPACE", "gamepad": 0},
+  "move_up": {"keyboard": "K_UP", "gamepad": 11},
+  "move_down": {"keyboard": "K_DOWN", "gamepad": 12},
+  "move_left": {"keyboard": "K_LEFT", "gamepad": 13},
+  "move_right": {"keyboard": "K_RIGHT", "gamepad": 14},
+  "pause": {"keyboard": "K_p", "gamepad": 9},
+  "open_settings": {"keyboard": "K_s", "gamepad": 8}
+}

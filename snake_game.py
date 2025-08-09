@@ -2,6 +2,7 @@ import pygame
 import random
 import sys
 from pygame import Vector2
+from engine.input import InputManager
 
 # Инициализация Pygame
 pygame.init()
@@ -86,6 +87,11 @@ class Main:
         self.score = 0
         self.high_score = 0
         self.game_active = False
+        self.in_settings = False
+        self.input = InputManager()
+        self.setting_actions = list(self.input.bindings.keys())
+        self.selected_action = 0
+        self.waiting_for_key = False
         
     def update(self):
         if self.game_active:
@@ -94,10 +100,13 @@ class Main:
             self.check_fail()
     
     def draw_elements(self):
-        self.draw_grass()
-        self.food.draw_food()
-        self.snake.draw_snake()
-        self.draw_score()
+        if self.in_settings:
+            self.draw_settings()
+        else:
+            self.draw_grass()
+            self.food.draw_food()
+            self.snake.draw_snake()
+            self.draw_score()
     
     def draw_grass(self):
         grass_color = (80, 120, 200)  # Более тёмный синий для узора
@@ -166,6 +175,30 @@ class Main:
         screen.blit(score_surface, score_rect)
         screen.blit(high_score_surface, high_score_rect)
 
+    def draw_settings(self):
+        font = pygame.font.Font(None, 60)
+        title_surface = font.render('Настройки управления', True, SCORE_COLOR)
+        title_rect = title_surface.get_rect(center=(SCREEN_SIZE/2, 40))
+        screen.blit(title_surface, title_rect)
+
+        font = pygame.font.Font(None, 40)
+        for i, action in enumerate(self.setting_actions):
+            mapping = self.input.bindings.get(action, {})
+            key_name = mapping.get('keyboard', '')
+            key_display = ''
+            if key_name and hasattr(pygame, key_name):
+                key_display = pygame.key.name(getattr(pygame, key_name)).upper()
+            gamepad_display = str(mapping.get('gamepad', '-'))
+            text = f"{action}: {key_display} / {gamepad_display}"
+            if i == self.selected_action:
+                text = '> ' + text
+            line_surf = font.render(text, True, SCORE_COLOR)
+            screen.blit(line_surf, (40, 100 + i * 40))
+
+        info_surface = font.render('Enter - изменить, Esc - назад', True, SCORE_COLOR)
+        info_rect = info_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE - 40))
+        screen.blit(info_surface, info_rect)
+
 # Создание экземпляра игры
 main_game = Main()
 
@@ -181,32 +214,62 @@ while True:
             sys.exit()
         if event.type == SCREEN_UPDATE:
             main_game.update()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and not main_game.game_active:
+
+        action = main_game.input.get_action(event)
+
+        if main_game.in_settings:
+            if main_game.waiting_for_key:
+                if event.type == pygame.KEYDOWN:
+                    key_name = 'K_' + pygame.key.name(event.key).upper()
+                    main_game.input.set_binding(main_game.setting_actions[main_game.selected_action], key_name)
+                    main_game.waiting_for_key = False
+                elif event.type == pygame.JOYBUTTONDOWN:
+                    main_game.input.set_binding(main_game.setting_actions[main_game.selected_action], event.button, 'gamepad')
+                    main_game.waiting_for_key = False
+            else:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    main_game.in_settings = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    main_game.waiting_for_key = True
+                elif action == 'move_up':
+                    main_game.selected_action = (main_game.selected_action - 1) % len(main_game.setting_actions)
+                elif action == 'move_down':
+                    main_game.selected_action = (main_game.selected_action + 1) % len(main_game.setting_actions)
+        else:
+            if action == 'open_settings' and not main_game.game_active:
+                main_game.in_settings = True
+            elif action == 'start' and not main_game.game_active:
                 main_game.game_active = True
-            if main_game.game_active:
-                if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+            elif action == 'pause':
+                main_game.game_active = not main_game.game_active
+            elif main_game.game_active:
+                if action == 'move_up' and main_game.snake.direction.y != 1:
                     main_game.snake.direction = Vector2(0, -1)
-                if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+                if action == 'move_down' and main_game.snake.direction.y != -1:
                     main_game.snake.direction = Vector2(0, 1)
-                if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+                if action == 'move_left' and main_game.snake.direction.x != 1:
                     main_game.snake.direction = Vector2(-1, 0)
-                if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+                if action == 'move_right' and main_game.snake.direction.x != -1:
                     main_game.snake.direction = Vector2(1, 0)
-    
+
     screen.fill(BACKGROUND_COLOR)
     main_game.draw_elements()
-    
-    if not main_game.game_active:
+
+    if not main_game.game_active and not main_game.in_settings:
         font = pygame.font.Font(None, 74)
         title_surface = font.render('🐍 Змейка', True, SCORE_COLOR)
         title_rect = title_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 - 50))
         screen.blit(title_surface, title_rect)
-        
+
         font = pygame.font.Font(None, 50)
         instruction_surface = font.render('Нажмите ПРОБЕЛ для начала', True, SCORE_COLOR)
         instruction_rect = instruction_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 50))
         screen.blit(instruction_surface, instruction_rect)
-    
+
+        font = pygame.font.Font(None, 40)
+        settings_surface = font.render('Нажмите S для настроек', True, SCORE_COLOR)
+        settings_rect = settings_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 100))
+        screen.blit(settings_surface, settings_rect)
+
     pygame.display.update()
-    clock.tick(60) 
+    clock.tick(60)
