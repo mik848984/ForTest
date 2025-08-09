@@ -3,7 +3,7 @@ import random
 import sys
 from pygame import Vector2
 
-import audio
+from audio import audio
 from engine.input import InputHandler
 from engine.ui import ScoreUI
 
@@ -129,6 +129,7 @@ class Main:
         self.food = Food()
         self.score = 0
         self.high_score = 0
+        self.win_score = 10
         self.game_active = False
         self.settings_active = False
         self.sound_enabled = True
@@ -139,8 +140,10 @@ class Main:
         self.ui = ScoreUI(screen)
 
         # load sound effects
-        audio.audio.load_effect('food', 'food.wav')
-        audio.audio.load_effect('game_over', 'game_over.wav')
+        audio.load_effect('food', 'food.wav')
+        audio.load_effect('game_over', 'game_over.wav')
+        audio.load_effect('wall', 'wall.wav')
+        audio.load_effect('victory', 'victory.wav')
 
     def update(self):
         if self.game_active:
@@ -231,13 +234,13 @@ class Main:
     def start_game(self):
         self.game_active = True
         if self.sound_enabled:
-            audio.audio.play_music('music.mp3')
+            audio.play_music('music.mp3')
 
     def toggle_sound(self):
         self.sound_enabled = not self.sound_enabled
-        audio.audio.set_enabled(self.sound_enabled)
+        audio.set_enabled(self.sound_enabled)
         if self.sound_enabled and self.game_active:
-            audio.audio.play_music('music.mp3')
+            audio.play_music('music.mp3')
 
     def draw_settings(self):
         font = pygame.font.Font(None, 74)
@@ -256,11 +259,11 @@ class Main:
         screen.blit(instruction_surface, instruction_rect)
 
     def on_food_eaten(self):
-        audio.audio.play_effect('food')
+        audio.play_effect('food')
 
     def on_game_over(self):
-        audio.audio.play_effect('game_over')
-        audio.audio.stop_music()
+        audio.play_effect('game_over')
+        audio.stop_music()
 
 # Создание экземпляра игры
 main_game = Main()
