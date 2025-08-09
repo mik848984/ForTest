@@ -4,6 +4,8 @@ import sys
 from pygame import Vector2
 
 import audio
+from engine.input import InputHandler
+from engine.ui import ScoreUI
 
 # Инициализация Pygame
 pygame.init()
@@ -132,6 +134,8 @@ class Main:
         self.sound_enabled = True
         self.particles = []
         self.flash_timer = 0
+        self.input = InputHandler()
+        self.score_ui = ScoreUI()
 
         # load sound effects
         audio.audio.load_effect('food', 'food.wav')
@@ -210,23 +214,7 @@ class Main:
         self.on_game_over()
     
     def draw_score(self):
-        score_text = f'Счёт: {self.score}'
-        high_score_text = f'Рекорд: {self.high_score}'
-        
-        font = pygame.font.Font(None, 50)
-        score_surface = font.render(score_text, True, SCORE_COLOR)
-        high_score_surface = font.render(high_score_text, True, SCORE_COLOR)
-        
-        score_x = int(SCREEN_SIZE - 200)
-        score_y = int(20)
-        score_rect = score_surface.get_rect(center=(score_x, score_y))
-        
-        high_score_x = int(SCREEN_SIZE - 200)
-        high_score_y = int(60)
-        high_score_rect = high_score_surface.get_rect(center=(high_score_x, high_score_y))
-        
-        screen.blit(score_surface, score_rect)
-        screen.blit(high_score_surface, high_score_rect)
+        self.score_ui.draw(screen, self.score, self.high_score)
 
     def spawn_particles(self, pos: Vector2) -> None:
         for _ in range(10):
@@ -282,7 +270,7 @@ pygame.time.set_timer(SCREEN_UPDATE, 150)
 
 # Основной игровой цикл
 while True:
-    for event in pygame.event.get():
+    for event in main_game.input.get_events():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
