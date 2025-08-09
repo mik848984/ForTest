@@ -26,6 +26,13 @@ pip install -r requirements.txt
 python snake_game.py
 ```
 
+## 🧱 Tile Arena Demo
+
+В проект добавлен файл `tile_arena.py`, демонстрирующий создание плиточной арены с закрашенными тайлами и простыми коллайдерами. Запуск:
+```bash
+python tile_arena.py
+```
+
 ## 🎯 Управление
 
 - **Стрелки (↑ ↓ ← →)** - управление змейкой
@@ -43,8 +50,10 @@ python snake_game.py
 
 ```
 ├── snake_game.py      # Основной файл игры
-├── requirements.txt    # Зависимости
-└── README.md         # Документация
+├── tile_arena.py      # Демонстрация плиточной арены
+├── assets             # Дополнительные ресурсы
+├── requirements.txt   # Зависимости
+└── README.md          # Документация
 ```
 
-Наслаждайтесь игрой! 🎮 
+Наслаждайтесь игрой! 🎮
