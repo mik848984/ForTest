@@ -3,9 +3,13 @@ import random
 import sys
 from pygame import Vector2
 
+puyuk9-codex
+from engine import audio
+
 from audio import audio
 from engine.input import InputHandler
 from engine.ui import ScoreUI
+main
 
 # Инициализация Pygame
 pygame.init()
@@ -133,18 +137,26 @@ class Main:
         self.game_active = False
         self.settings_active = False
         self.sound_enabled = True
+puyuk9-codex
+        self.win_score = 10
+
         self.particles = []
         self.flash_timer = 0
         # Engine subsystems
         self.input = InputHandler()
         self.ui = ScoreUI(screen)
+main
 
         # load sound effects
         audio.load_effect('food', 'food.wav')
         audio.load_effect('game_over', 'game_over.wav')
         audio.load_effect('wall', 'wall.wav')
         audio.load_effect('victory', 'victory.wav')
+puyuk9-codex
+        
 
+
+main
     def update(self):
         if self.game_active:
             self.snake.move_snake()
@@ -188,6 +200,8 @@ class Main:
             if self.score > self.high_score:
                 self.high_score = self.score
             self.on_food_eaten()
+            if self.score == self.win_score:
+                self.on_victory()
         
         for block in self.snake.body[1:]:
             if block == self.food.pos:
@@ -196,12 +210,16 @@ class Main:
     def check_fail(self):
         # Прохождение через стены
         if self.snake.body[0].x < 0:
+            self.on_wall_hit()
             self.snake.body[0].x = CELL_NUMBER - 1
         elif self.snake.body[0].x >= CELL_NUMBER:
+            self.on_wall_hit()
             self.snake.body[0].x = 0
         elif self.snake.body[0].y < 0:
+            self.on_wall_hit()
             self.snake.body[0].y = CELL_NUMBER - 1
         elif self.snake.body[0].y >= CELL_NUMBER:
+            self.on_wall_hit()
             self.snake.body[0].y = 0
         
         # Проверка столкновения с собой
@@ -264,6 +282,17 @@ class Main:
     def on_game_over(self):
         audio.play_effect('game_over')
         audio.stop_music()
+puyuk9-codex
+
+    def on_wall_hit(self):
+        audio.play_effect('wall')
+
+    def on_victory(self):
+        audio.play_effect('victory')
+        audio.stop_music()
+        self.game_active = False
+
+main
 
 # Создание экземпляра игры
 main_game = Main()
