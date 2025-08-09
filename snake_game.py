@@ -24,31 +24,43 @@ screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 pygame.display.set_caption('🐍 Змейка - 2D Игра')
 clock = pygame.time.Clock()
 
+# ---------------- Lighting and shading -----------------
+LIGHT_DIR = Vector2(-1, -1)
+SHADOW_OFFSET = Vector2(4, 4)
+shadow_surface = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+shadow_surface.fill((0, 0, 0, 80))
+
+
+def create_phong_surface(color):
+    """Create a square surface with a simple Phong-like shading."""
+    surf = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+    for x in range(CELL_SIZE):
+        for y in range(CELL_SIZE):
+            nx = x / CELL_SIZE
+            ny = y / CELL_SIZE
+            diff = max(0, 1 - 0.7 * nx - 0.7 * ny)
+            spec = max(0, 1 - nx - ny) ** 20
+            r = min(255, int(color[0] * (0.2 + 0.8 * diff) + 255 * spec))
+            g = min(255, int(color[1] * (0.2 + 0.8 * diff) + 255 * spec))
+            b = min(255, int(color[2] * (0.2 + 0.8 * diff) + 255 * spec))
+            surf.set_at((x, y), (r, g, b))
+    return surf
+
 class Snake:
     def __init__(self):
         self.body = [Vector2(5, 10), Vector2(4, 10), Vector2(3, 10)]
         self.direction = Vector2(1, 0)
         self.new_block = False
-        
-        # Загрузка изображений змейки
-        self.head_up = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.head_up.fill(SNAKE_COLOR)
-        self.head_down = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.head_down.fill(SNAKE_COLOR)
-        self.head_right = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.head_right.fill(SNAKE_COLOR)
-        self.head_left = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.head_left.fill(SNAKE_COLOR)
-        
-        self.tail = pygame.Surface((CELL_SIZE, CELL_SIZE))
-        self.tail.fill(SNAKE_COLOR)
-        
+        # Pre-rendered segment surface with simple Phong shading
+        self.segment_surface = create_phong_surface(SNAKE_COLOR)
+
     def draw_snake(self):
         for block in self.body:
             x_pos = int(block.x * CELL_SIZE)
             y_pos = int(block.y * CELL_SIZE)
             block_rect = pygame.Rect(x_pos, y_pos, CELL_SIZE, CELL_SIZE)
-            pygame.draw.rect(screen, SNAKE_COLOR, block_rect)
+            screen.blit(shadow_surface, block_rect.move(SHADOW_OFFSET))
+            screen.blit(self.segment_surface, block_rect)
     
     def move_snake(self):
         if self.new_block:
@@ -70,16 +82,44 @@ class Snake:
 
 class Food:
     def __init__(self):
+        self.surface = create_phong_surface(FOOD_COLOR)
         self.randomize()
-        
+
     def draw_food(self):
         food_rect = pygame.Rect(int(self.pos.x * CELL_SIZE), int(self.pos.y * CELL_SIZE), CELL_SIZE, CELL_SIZE)
-        pygame.draw.rect(screen, FOOD_COLOR, food_rect)
+        screen.blit(shadow_surface, food_rect.move(SHADOW_OFFSET))
+        screen.blit(self.surface, food_rect)
     
     def randomize(self):
         self.x = random.randint(0, CELL_NUMBER - 1)
         self.y = random.randint(0, CELL_NUMBER - 1)
         self.pos = Vector2(self.x, self.y)
+
+
+class Particle:
+    """Simple particle used for food consumption effects."""
+
+    def __init__(self, grid_pos: Vector2):
+        self.pos = Vector2(
+            grid_pos.x * CELL_SIZE + CELL_SIZE / 2,
+            grid_pos.y * CELL_SIZE + CELL_SIZE / 2,
+        )
+        self.velocity = Vector2(random.uniform(-1, 1), random.uniform(-1, 1)) * 2
+        self.timer = 30
+        self.radius = 2
+
+    def update(self) -> bool:
+        self.pos += self.velocity
+        self.timer -= 1
+        self.radius += 0.3
+        return self.timer <= 0
+
+    def draw(self, surface: pygame.Surface) -> None:
+        alpha = max(0, int(255 * (self.timer / 30)))
+        radius = max(1, int(self.radius))
+        particle_surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(particle_surf, (255, 255, 255, alpha), (radius, radius), radius)
+        surface.blit(particle_surf, (int(self.pos.x - radius), int(self.pos.y - radius)))
 
 class Main:
     def __init__(self):
@@ -90,22 +130,32 @@ class Main:
         self.game_active = False
         self.settings_active = False
         self.sound_enabled = True
+        self.particles = []
+        self.flash_timer = 0
 
         # load sound effects
         audio.audio.load_effect('food', 'food.wav')
         audio.audio.load_effect('game_over', 'game_over.wav')
-        
+
     def update(self):
         if self.game_active:
             self.snake.move_snake()
             self.check_collision()
             self.check_fail()
+        for p in self.particles[:]:
+            if p.update():
+                self.particles.remove(p)
+        if self.flash_timer > 0:
+            self.flash_timer -= 1
     
     def draw_elements(self):
         self.draw_grass()
         self.food.draw_food()
         self.snake.draw_snake()
+        for p in self.particles:
+            p.draw(screen)
         self.draw_score()
+        self.draw_flash()
     
     def draw_grass(self):
         grass_color = (80, 120, 200)  # Более тёмный синий для узора
@@ -123,6 +173,7 @@ class Main:
     
     def check_collision(self):
         if self.food.pos == self.snake.body[0]:
+            self.spawn_particles(self.food.pos)
             self.food.randomize()
             self.snake.add_block()
             self.score += 1
@@ -152,6 +203,7 @@ class Main:
     
     def game_over(self):
         self.game_active = False
+        self.flash_timer = 30
         self.snake.reset()
         self.food.randomize()
         self.score = 0
@@ -175,6 +227,17 @@ class Main:
         
         screen.blit(score_surface, score_rect)
         screen.blit(high_score_surface, high_score_rect)
+
+    def spawn_particles(self, pos: Vector2) -> None:
+        for _ in range(10):
+            self.particles.append(Particle(pos))
+
+    def draw_flash(self) -> None:
+        if self.flash_timer > 0:
+            alpha = int(255 * (self.flash_timer / 30))
+            flash = pygame.Surface((SCREEN_SIZE, SCREEN_SIZE), pygame.SRCALPHA)
+            flash.fill((255, 0, 0, alpha))
+            screen.blit(flash, (0, 0))
 
     def start_game(self):
         self.game_active = True
