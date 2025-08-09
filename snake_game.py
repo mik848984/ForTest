@@ -3,6 +3,8 @@ import random
 import sys
 from pygame import Vector2
 
+import audio
+
 # Инициализация Pygame
 pygame.init()
 
@@ -86,6 +88,12 @@ class Main:
         self.score = 0
         self.high_score = 0
         self.game_active = False
+        self.settings_active = False
+        self.sound_enabled = True
+
+        # load sound effects
+        audio.audio.load_effect('food', 'food.wav')
+        audio.audio.load_effect('game_over', 'game_over.wav')
         
     def update(self):
         if self.game_active:
@@ -120,6 +128,7 @@ class Main:
             self.score += 1
             if self.score > self.high_score:
                 self.high_score = self.score
+            self.on_food_eaten()
         
         for block in self.snake.body[1:]:
             if block == self.food.pos:
@@ -146,6 +155,7 @@ class Main:
         self.snake.reset()
         self.food.randomize()
         self.score = 0
+        self.on_game_over()
     
     def draw_score(self):
         score_text = f'Счёт: {self.score}'
@@ -166,6 +176,40 @@ class Main:
         screen.blit(score_surface, score_rect)
         screen.blit(high_score_surface, high_score_rect)
 
+    def start_game(self):
+        self.game_active = True
+        if self.sound_enabled:
+            audio.audio.play_music('music.mp3')
+
+    def toggle_sound(self):
+        self.sound_enabled = not self.sound_enabled
+        audio.audio.set_enabled(self.sound_enabled)
+        if self.sound_enabled and self.game_active:
+            audio.audio.play_music('music.mp3')
+
+    def draw_settings(self):
+        font = pygame.font.Font(None, 74)
+        title_surface = font.render('Настройки', True, SCORE_COLOR)
+        title_rect = title_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 - 80))
+        screen.blit(title_surface, title_rect)
+
+        font = pygame.font.Font(None, 50)
+        sound_text = f'Звук: {"Вкл" if self.sound_enabled else "Выкл"}'
+        sound_surface = font.render(sound_text, True, SCORE_COLOR)
+        sound_rect = sound_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2))
+        screen.blit(sound_surface, sound_rect)
+
+        instruction_surface = font.render('Нажмите S для переключения', True, SCORE_COLOR)
+        instruction_rect = instruction_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 60))
+        screen.blit(instruction_surface, instruction_rect)
+
+    def on_food_eaten(self):
+        audio.audio.play_effect('food')
+
+    def on_game_over(self):
+        audio.audio.play_effect('game_over')
+        audio.audio.stop_music()
+
 # Создание экземпляра игры
 main_game = Main()
 
@@ -182,31 +226,45 @@ while True:
         if event.type == SCREEN_UPDATE:
             main_game.update()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and not main_game.game_active:
-                main_game.game_active = True
-            if main_game.game_active:
-                if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
-                    main_game.snake.direction = Vector2(0, -1)
-                if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
-                    main_game.snake.direction = Vector2(0, 1)
-                if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
-                    main_game.snake.direction = Vector2(-1, 0)
-                if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
-                    main_game.snake.direction = Vector2(1, 0)
+            if main_game.settings_active:
+                if event.key == pygame.K_s:
+                    main_game.toggle_sound()
+                if event.key == pygame.K_ESCAPE:
+                    main_game.settings_active = False
+            else:
+                if event.key == pygame.K_SPACE and not main_game.game_active:
+                    main_game.start_game()
+                elif event.key == pygame.K_n and not main_game.game_active:
+                    main_game.settings_active = True
+                if main_game.game_active:
+                    if event.key == pygame.K_UP and main_game.snake.direction.y != 1:
+                        main_game.snake.direction = Vector2(0, -1)
+                    if event.key == pygame.K_DOWN and main_game.snake.direction.y != -1:
+                        main_game.snake.direction = Vector2(0, 1)
+                    if event.key == pygame.K_LEFT and main_game.snake.direction.x != 1:
+                        main_game.snake.direction = Vector2(-1, 0)
+                    if event.key == pygame.K_RIGHT and main_game.snake.direction.x != -1:
+                        main_game.snake.direction = Vector2(1, 0)
     
     screen.fill(BACKGROUND_COLOR)
     main_game.draw_elements()
-    
+
     if not main_game.game_active:
-        font = pygame.font.Font(None, 74)
-        title_surface = font.render('🐍 Змейка', True, SCORE_COLOR)
-        title_rect = title_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 - 50))
-        screen.blit(title_surface, title_rect)
-        
-        font = pygame.font.Font(None, 50)
-        instruction_surface = font.render('Нажмите ПРОБЕЛ для начала', True, SCORE_COLOR)
-        instruction_rect = instruction_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 50))
-        screen.blit(instruction_surface, instruction_rect)
-    
+        if main_game.settings_active:
+            main_game.draw_settings()
+        else:
+            font = pygame.font.Font(None, 74)
+            title_surface = font.render('🐍 Змейка', True, SCORE_COLOR)
+            title_rect = title_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 - 50))
+            screen.blit(title_surface, title_rect)
+
+            font = pygame.font.Font(None, 50)
+            instruction_surface = font.render('Нажмите ПРОБЕЛ для начала', True, SCORE_COLOR)
+            instruction_rect = instruction_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 50))
+            screen.blit(instruction_surface, instruction_rect)
+            settings_surface = font.render('Нажмите N для настроек', True, SCORE_COLOR)
+            settings_rect = settings_surface.get_rect(center=(SCREEN_SIZE/2, SCREEN_SIZE/2 + 100))
+            screen.blit(settings_surface, settings_rect)
+
     pygame.display.update()
-    clock.tick(60) 
+    clock.tick(60)
