@@ -134,8 +134,9 @@ class Main:
         self.sound_enabled = True
         self.particles = []
         self.flash_timer = 0
+        # Engine subsystems
         self.input = InputHandler()
-        self.score_ui = ScoreUI()
+        self.ui = ScoreUI(screen)
 
         # load sound effects
         audio.audio.load_effect('food', 'food.wav')
@@ -214,7 +215,7 @@ class Main:
         self.on_game_over()
     
     def draw_score(self):
-        self.score_ui.draw(screen, self.score, self.high_score)
+        self.ui.draw(screen, self.score, self.high_score)
 
     def spawn_particles(self, pos: Vector2) -> None:
         for _ in range(10):
